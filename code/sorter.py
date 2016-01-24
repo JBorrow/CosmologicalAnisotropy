@@ -6,6 +6,8 @@ Sorts by name """
 
 import numpy as np
 import csv
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 class dataset(object):
 
@@ -67,29 +69,83 @@ class dataset(object):
     def __get_name_indicies(self):
         """Finds the row numbers where names appear from U2.1 in all dataset so
         we can extract the ra/dec"""
-        total_rawnames = self.total_rawdata[:,0]
-        rawnames = self.union_rawdata[:,0]
-        indicies = np.empty_like(self.names)
+        total_rawnames = list(self.total_rawdata[:,0])
+        rawnames = list(self.union_rawdata[:,0])
+        indicies = []
+        names = []
 
-        for i in range(len(self.names)):
-            indicies[i] = np.where(total_rawnames==rawnames[i].strip)
+        for name in rawnames:
+            try:
+                indicies.append(total_rawnames.index(name.upper()))
+                names.append(name)
+            except ValueError:
+                try:
+                    indicies.append(total_rawnames.index(name))
+                    names.append(name)
+                except ValueError:
+                    print("Could not find %s in catalogue. Skipping" % name)
+        
+        self.names = np.array(names)  # if some not in catalogue
 
-        return indicies
+        return np.array(indicies)
 
 
     def _get_ra_dec(self):
         self.ra = np.empty_like(self.names)
         self.dec = np.empty_like(self.names)
-        print(self.ra)
+        
         indicies = self.__get_name_indicies()
 
-        for i in range(len(self.ra)):
+        for i in range(len(indicies)):
             current_index = indicies[i]
             self.ra[i] = self.total_rawdata[current_index,1]
             self.dec[i] = self.total_rawdata[current_index,2]
 
         return
 
+    
+    def __clean_ra_dec(self):
+        clean_ra_dec = np.empty_like(self.ra, dtype=SkyCoord)
+
+        for i in range(len(self.ra)):
+            numbers = 0
+            for item in self.ra[i].split(" "):
+                if item and numbers == 0:
+                    hours = float(item)
+                    numbers += 1
+                elif item and numbers == 1:
+                    mins = float(item)
+                    numbers += 1
+                elif numbers == 2:
+                    break
+                else:
+                    continue
+                
+            numbers = 0
+            for item in self.dec[i].split(" "):
+                if item and numbers == 0:
+                    deg = float(item)
+                    numbers += 1
+                elif item and numbers == 1:
+                    am = float(item)
+                    numbers += 1
+                elif numbers == 2:
+                    break
+                else:
+                    continue
+
+
+            clean_ra_dec[i] = SkyCoord('%2.0fh%2.1fh' % (hours, mins), '%2.0fd%2.0fm' % (deg, am))
+
+        self.clean_ra_dec = clean_ra_dec
+
+        return
+
+
 
 if __name__ == "__main__":
     data = dataset()
+    self.clean_ra_dec()
+    print(clean_ra_dec)
+
+
