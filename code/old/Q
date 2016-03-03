@@ -1,0 +1,86 @@
+""" Sorting module for Supernova Cosmology
+
+Takes Union2.1 Data and whole-sky supernovae data to find positions of U2.1 SNe.
+
+Sorts by name """
+
+import numpy as np
+
+class dataset(object):
+
+    def __init__(self):
+        self.union_url = "../data/SCPUnion2.1_mu_vs_z.txt"
+        self.union_delim = "\t"
+        self.total_url = "../data/all_rawdata_parsed_v2.csv"
+        self.total_delim = ","
+        self._get_raw()
+        print(self.total_rawdata)
+        self._get_names()
+        self._get_mu()
+        self._get_mu_err()
+        self._get_z()
+        self._get_ra_dec()
+
+        return
+
+    
+    def _get_raw(self):
+        self.union_rawdata = np.loadtxt(self.union_url, delimiter=self.union_delim, dtype=object)
+        self.total_rawdata = np.genfromtxt(self.total_url, delimiter=self.total_delim)
+        
+        return
+
+
+    def _get_names(self):
+        self.names = self.union_rawdata[:,0]
+
+        return
+
+    
+    def _get_z(self):
+        self.z = self.union_rawdata[:,1]
+        
+        return
+
+    
+    def _get_mu(self):
+        self.mu = self.union_rawdata[:,2]
+
+        return
+
+
+    def _get_mu_err(self):
+        self.mu_err = self.union_rawdata[:,3]
+
+        return
+
+
+    def __get_name_indicies(self):
+        """Finds the row numbers where names appear from U2.1 in all dataset so
+        we can extract the ra/dec"""
+        total_rawnames = self.total_rawdata[:,0]
+        rawnames = self.union_rawdata[:,0]
+        indicies = np.empty_like(self.names)
+
+        for i in range(len(self.names)):
+            indicies[i] = total_rawnames.index(rawnames[i])
+
+        return indicies
+
+
+    def _get_ra_dec(self):
+        self.ra = np.empty_like(self.names)
+        self.dec = np.empty_like(self.names)
+
+        indicies = self.__get_name_indicies()
+
+        for i in range(len(self.ra)):
+            self.ra[i] = self.union_rawdata[indicies[i],1]
+            self.dec[i] = self.union_rawdata[indicies[i],2]
+
+        return
+
+
+if __name__ == "__main__":
+    data = dataset()
+    print(data.ra())
